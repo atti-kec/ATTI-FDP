@@ -13,7 +13,8 @@ One folder, one command per day. No installing Hadoop, Hive, Spark or Kafka on t
 |---|---|---|
 | 1-3 HDFS, Hive, MySQL, Spark | `docker compose --profile hadoop up -d` | HDFS, Hive, MySQL + Jupyter |
 | 4-5 Kafka, Spark Streaming, MLlib | `docker compose --profile streaming up -d` | Kafka + Jupyter |
-| 6 ELK + mini project | `docker compose --profile all up -d` | everything |
+| 6 ELK + ML Mini Project (Recommended) | `docker compose -f docker-compose.day6.yml up -d` (or `--profile day6`) | Kafka + Spark ML + ELK (~3.2 GB RAM) |
+| All services (Legacy) | `docker compose --profile all up -d` | everything (needs ~8 GB RAM) |
 
 Stop (keeps data): `docker compose stop`. Remove everything: `docker compose down`.
 
@@ -43,6 +44,21 @@ docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --topic stati
 ```
 Inside Jupyter use these addresses: Kafka `kafka:29092`, HDFS `hdfs://namenode:8020`, MySQL `mysql:3306`, Elasticsearch `http://elasticsearch:9200`.
 Run `notebooks/00_smoke_test.py` to check each service.
+
+## Day 6: Real-Time Streaming & AI Anomaly Detection Mini Project
+1. Start the Day 6 stack:
+   ```bash
+   docker compose -f docker-compose.day6.yml up -d
+   ```
+2. Start the live EV telemetry generator (in terminal):
+   ```bash
+   python notebooks/01_ev_telemetry_generator.py --bootstrap localhost:9092
+   ```
+3. Open JupyterLab at `http://localhost:8888`:
+   * Run `02_train_anomaly_model.ipynb` to fit and persist the Spark MLlib model.
+   * Run `03_pyspark_streaming_anomaly_detection.ipynb` to launch real-time Kafka streaming inference.
+4. Open Kibana at `http://localhost:5601`:
+   * Follow `notebooks/04_kibana_dashboard_guide.md` to create the real-time IoT Ops Dashboard.
 
 ## Notes
 - **Sqoop:** Apache retired Sqoop in 2021 and there is no official image. Day 3 import/export is done with **Spark JDBC** (`spark.read.jdbc`, example in the smoke test), the modern replacement. Explain Sqoop concepts on slides.
