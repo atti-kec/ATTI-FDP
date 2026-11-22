@@ -66,7 +66,12 @@ def main():
     kafka_server = os.environ.get("KAFKA_BOOTSTRAP", "kafka:29092")
     input_topic = "station-telemetry"
     output_topic = "station-alerts"
-    model_path = "/workspace/models/ev_anomaly_model" if os.path.exists("/workspace") else "./models/ev_anomaly_model"
+    if os.path.exists("/app/models/ev_anomaly_model"):
+        model_path = "/app/models/ev_anomaly_model"
+    elif os.path.exists("/workspace/models/ev_anomaly_model"):
+        model_path = "/workspace/models/ev_anomaly_model"
+    else:
+        model_path = "./models/ev_anomaly_model"
 
     print("=" * 70)
     print(" PySpark Structured Streaming + MLlib Anomaly Detection")
@@ -75,9 +80,9 @@ def main():
 
     spark = SparkSession.builder \
         .appName("EV-Streaming-Anomaly-Detection") \
-        .master("local[3]") \
-        .config("spark.driver.memory", "1g") \
-        .config("spark.sql.streaming.checkpointLocation", "/workspace/checkpoints/streaming_app") \
+        .master("local[2]") \
+        .config("spark.driver.memory", "512m") \
+        .config("spark.sql.streaming.checkpointLocation", "/tmp/checkpoints/streaming_app") \
         .getOrCreate()
 
     spark.sparkContext.setLogLevel("WARN")
@@ -148,14 +153,16 @@ def main():
         .format("kafka") \
         .option("kafka.bootstrap.servers", kafka_server) \
         .option("topic", output_topic) \
-        .option("checkpointLocation", "/workspace/checkpoints/kafka_alerts") \
+        .option("checkpointLocation", "/tmp/checkpoints/kafka_alerts") \
         .outputMode("append") \
+        .trigger(processingTime="5 seconds") \
         .start()
 
     # 8. Sink 2: ForeachBatch for direct Elasticsearch bulk write and console display
     query_es = df_anomalies.writeStream \
         .foreachBatch(process_batch_to_es) \
         .outputMode("append") \
+        .trigger(processingTime="5 seconds") \
         .start()
 
     print("[+] Streaming queries active! Listening for incoming Kafka events...")

@@ -6,6 +6,17 @@ __pycache__/
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints
 
+# Spark & Machine Learning artifacts generated at runtime
+**/models/
+**/checkpoints/
+checkpoints/
+*.parquet
+
+# Logs and runtime dumps
+*.log
+streaming.log
+generator.log
+
 # Environment variables
 *.env.local
 
