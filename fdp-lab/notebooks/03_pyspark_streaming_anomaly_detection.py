@@ -66,7 +66,12 @@ def main():
     kafka_server = os.environ.get("KAFKA_BOOTSTRAP", "kafka:29092")
     input_topic = "station-telemetry"
     output_topic = "station-alerts"
-    model_path = "/workspace/models/ev_anomaly_model" if os.path.exists("/workspace") else "./models/ev_anomaly_model"
+    if os.path.exists("/app/models/ev_anomaly_model"):
+        model_path = "/app/models/ev_anomaly_model"
+    elif os.path.exists("/workspace/models/ev_anomaly_model"):
+        model_path = "/workspace/models/ev_anomaly_model"
+    else:
+        model_path = "./models/ev_anomaly_model"
 
     print("=" * 70)
     print(" PySpark Structured Streaming + MLlib Anomaly Detection")
@@ -75,12 +80,47 @@ def main():
 
     spark = SparkSession.builder \
         .appName("EV-Streaming-Anomaly-Detection") \
-        .master("local[3]") \
-        .config("spark.driver.memory", "1g") \
-        .config("spark.sql.streaming.checkpointLocation", "/workspace/checkpoints/streaming_app") \
+        .master("local[2]") \
+        .config("spark.driver.memory", "512m") \
+        .config("spark.sql.streaming.checkpointLocation", "/tmp/checkpoints/streaming_app") \
         .getOrCreate()
 
     spark.sparkContext.setLogLevel("WARN")
+
+    # 0. Pre-flight Check: Ensure Elasticsearch template and 2-shard index exist
+    try:
+        from elasticsearch import Elasticsearch
+        es_host = os.environ.get("ES_HOST", "http://elasticsearch:9200")
+        es = Elasticsearch(es_host)
+        
+        # Register index template so any station-alerts* index defaults to 2 primary shards
+        template_body = {
+            "index_patterns": ["station-alerts*"],
+            "template": {
+                "settings": {
+                    "number_of_shards": 2,
+                    "number_of_replicas": 0
+                }
+            }
+        }
+        es.indices.put_index_template(name="station_alerts_template", body=template_body)
+        print("[+] Verified Elasticsearch index template 'station_alerts_template' (2 primary shards).")
+
+        if not es.indices.exists(index="station-alerts"):
+            es.indices.create(
+                index="station-alerts",
+                body={
+                    "settings": {
+                        "number_of_shards": 2,
+                        "number_of_replicas": 0
+                    }
+                }
+            )
+            print("[+] Initialized Elasticsearch index 'station-alerts' with 2 primary shards.")
+        else:
+            print("[+] Elasticsearch index 'station-alerts' active.")
+    except Exception as e:
+        print(f"[-] Note: Elasticsearch pre-flight index check skipped ({e})")
 
     # 1. Load Pre-trained MLlib Pipeline Model
     if not os.path.exists(model_path):
@@ -148,14 +188,16 @@ def main():
         .format("kafka") \
         .option("kafka.bootstrap.servers", kafka_server) \
         .option("topic", output_topic) \
-        .option("checkpointLocation", "/workspace/checkpoints/kafka_alerts") \
+        .option("checkpointLocation", "/tmp/checkpoints/kafka_alerts") \
         .outputMode("append") \
+        .trigger(processingTime="5 seconds") \
         .start()
 
     # 8. Sink 2: ForeachBatch for direct Elasticsearch bulk write and console display
     query_es = df_anomalies.writeStream \
         .foreachBatch(process_batch_to_es) \
         .outputMode("append") \
+        .trigger(processingTime="5 seconds") \
         .start()
 
     print("[+] Streaming queries active! Listening for incoming Kafka events...")

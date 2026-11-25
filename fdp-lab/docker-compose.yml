@@ -100,5 +100,7 @@ services:
     environment:
       LS_JAVA_OPTS: -Xms384m -Xmx384m
       XPACK_MONITORING_ENABLED: "false"
-    volumes: ["./logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf"]
+    volumes:
+      - ./logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+      - ./logstash/station_alerts_template.json:/usr/share/logstash/templates/station_alerts_template.json:ro
     depends_on: [elasticsearch, kafka]
