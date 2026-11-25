@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 4: Real-Time Data Streaming with Apache Kafka & Spark</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --slide-bg: #ffffff;
+      --surface: #f8fafc;
+      --border: #cbd5e1;
+      --text: #0f172a;
+      --muted: #475569;
+      --accent: #0284c7;
+      --accent-dark: #0369a1;
+      --purple: #6d28d9;
+      --purple-bg: #ede9fe;
+      --green: #059669;
+      --green-bg: #d1fae5;
+      --amber: #d97706;
+      --amber-bg: #fef3c7;
+      --code-bg: #0f172a;
+      --code-text: #f8fafc;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      background: #0f172a;
+      color: #fff;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 3px solid var(--accent);
+      flex-shrink: 0;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 14px; }
+    .badge {
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .deck-title { font-size: 1.02rem; font-weight: 600; color: #e2e8f0; }
+    .controls { display: flex; align-items: center; gap: 10px; }
+
+    .nav-btn {
+      background: #1e293b;
+      color: #fff;
+      border: 1px solid #334155;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+    .nav-btn:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); }
+    .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    #slide-counter { font-size: 0.92rem; font-weight: 600; color: #94a3b8; min-width: 85px; text-align: center; }
+
+    .stage {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      padding: 18px 24px;
+      overflow: hidden;
+    }
+
+    .slide {
+      display: none;
+      width: 100%;
+      max-width: 1060px;
+      background: var(--slide-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      padding: 32px 42px;
+      overflow-y: auto;
+      flex-direction: column;
+    }
+    .slide.active { display: flex; }
+
+    .title-slide {
+      justify-content: center;
+      text-align: center;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #fff;
+      border: none;
+    }
+    .title-slide .pill {
+      display: inline-block;
+      background: rgba(56, 189, 248, 0.2);
+      color: #7dd3fc;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin: 0 auto 20px;
+    }
+    .title-slide h1 { font-size: 2.65rem; line-height: 1.2; margin-bottom: 18px; }
+    .title-slide p { font-size: 1.22rem; color: #cbd5e1; max-width: 720px; margin: 0 auto 28px; }
+
+    .agenda-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      max-width: 760px;
+      margin: 0 auto;
+      text-align: left;
+    }
+    .agenda-item {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 1rem;
+      color: #e2e8f0;
+    }
+
+    .slide-kicker {
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.1px;
+      color: var(--accent);
+      margin-bottom: 5px;
+    }
+    h2 {
+      font-size: 1.85rem;
+      color: var(--text);
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    h3 { font-size: 1.18rem; color: #1e293b; margin: 14px 0 8px; }
+    p, li { font-size: 1.05rem; line-height: 1.56; color: #334155; margin-bottom: 9px; }
+    ul, ol { margin-left: 24px; margin-bottom: 12px; }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 8px 0; }
+    .box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .callout {
+      background: #e0f2fe;
+      border-left: 5px solid var(--accent);
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin: 12px 0;
+      font-size: 1.02rem;
+    }
+    .callout.lab { background: var(--green-bg); border-left-color: var(--green); }
+    .callout.warn { background: var(--amber-bg); border-left-color: var(--amber); }
+
+    table { width: 100%; border-collapse: collapse; margin: 10px 0 14px; font-size: 0.96rem; }
+    th, td { padding: 9px 13px; text-align: left; border: 1px solid var(--border); }
+    th { background: #0f172a; color: #fff; font-weight: 600; }
+    tr:nth-child(even) td { background: var(--surface); }
+
+    .code-wrap { position: relative; margin: 8px 0 12px; }
+    pre {
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 13px 16px;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 0.9rem;
+      line-height: 1.46;
+    }
+    code {
+      font-family: "Cascadia Code", Consolas, monospace;
+      background: #e2e8f0;
+      color: #0f172a;
+      padding: 2px 6px;
+      border-radius: 5px;
+      font-size: 0.9em;
+      font-weight: 600;
+    }
+    pre code { background: none; color: inherit; padding: 0; font-weight: 400; }
+
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #334155;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.76rem;
+      cursor: pointer;
+    }
+    .copy-btn:hover { background: var(--accent); }
+
+    .diagram {
+      background: var(--code-bg);
+      color: #7dd3fc;
+      padding: 14px 16px;
+      border-radius: 10px;
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 0.88rem;
+      line-height: 1.42;
+      white-space: pre;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+
+    .term {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--purple-bg);
+      color: var(--purple);
+      border: 1px dashed #8b5cf6;
+      padding: 0 7px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.95em;
+    }
+    .term:hover { background: #ddd6fe; }
+    .term::after {
+      content: "?";
+      font-size: 0.75em;
+      background: var(--purple);
+      color: #fff;
+      border-radius: 50%;
+      width: 15px;
+      height: 15px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .scenario-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .scenario-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 13px;
+      font-size: 0.95rem;
+    }
+    .scenario-card strong { color: var(--accent-dark); }
+
+    #term-drawer {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 420px;
+      max-width: calc(100vw - 32px);
+      background: #0f172a;
+      color: #f8fafc;
+      border: 2px solid #8b5cf6;
+      border-radius: 12px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+      padding: 18px 20px;
+      z-index: 1000;
+      display: none;
+    }
+    #term-drawer.open { display: block; }
+    .drawer-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .drawer-tag { font-size: 0.75rem; text-transform: uppercase; color: #c4b5fd; font-weight: 700; letter-spacing: 0.8px; }
+    #drawer-close { background: none; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer; }
+    #drawer-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; color: #fff; }
+    #drawer-body { font-size: 0.98rem; color: #cbd5e1; line-height: 1.5; }
+
+    #index-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 900;
+    }
+    #index-modal.open { display: flex; }
+    .index-box {
+      background: #fff;
+      width: 580px;
+      max-width: 92vw;
+      max-height: 82vh;
+      border-radius: 12px;
+      padding: 20px 24px;
+      overflow-y: auto;
+    }
+    .index-item {
+      padding: 9px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      color: #1e293b;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .index-item:hover { background: #e0f2fe; color: var(--accent-dark); }
+
+    @media (max-width: 820px) {
+      .two-col, .agenda-grid, .scenario-grid { grid-template-columns: 1fr; }
+      .slide { padding: 22px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-left">
+      <span class="badge">Day 4</span>
+      <span class="deck-title">Apache Kafka &amp; Real-Time Data Streaming</span>
+    </div>
+    <div class="controls">
+      <button class="nav-btn" onclick="toggleIndex()">Slides Menu</button>
+      <button class="nav-btn" id="prev-btn" onclick="changeSlide(-1)">&larr; Prev</button>
+      <span id="slide-counter">1 / 15</span>
+      <button class="nav-btn" id="next-btn" onclick="changeSlide(1)">Next &rarr;</button>
+    </div>
+  </header>
+
+  <div class="stage">
+
+    <!-- SLIDE 1 -->
+    <section class="slide title-slide active" data-title="1. Welcome: Real-Time Streaming (Day 4)">
+      <div class="pill">FDP on AI-Enabled Big Data Analytics</div>
+      <h1>Real-Time Data Streaming with<br/>Apache Kafka &amp; Spark</h1>
+      <p>From EV Charging Station Telemetry to Live Alerts &amp; Windowed Analytics</p>
+      <div class="agenda-grid">
+        <div class="agenda-item"><strong>Part 1:</strong> Lab Setup (WSL 2 + Docker)</div>
+        <div class="agenda-item"><strong>Part 2:</strong> Kafka Core, Topics &amp; Producers</div>
+        <div class="agenda-item"><strong>Part 3:</strong> Partitions, Offsets &amp; Consumers</div>
+        <div class="agenda-item"><strong>Part 4:</strong> Spark Streaming &amp; 10 Use Cases</div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2 -->
+    <section class="slide" data-title="2. Lab Setup: Update WSL & Start Docker">
+      <div class="slide-kicker">Environment Setup</div>
+      <h2>Lab PC Setup: Update WSL &amp; Launch Containers</h2>
+      <p>Before writing code, let us ensure every lab PC has the latest <span class="term" data-term="wsl">WSL</span> and <span class="term" data-term="docker">Docker</span> running.</p>
+      <div class="two-col">
+        <div class="box">
+          <h3>Step 1: Update WSL</h3>
+          <ol>
+            <li>Open browser and go to: <code>https://github.com/microsoft/wsl/releases</code></li>
+            <li>Download version <code>3.0.5</code> (<code>arm64</code> or <code>x64</code> matching your PC) &rarr; <code>Microsoft.WSL_*.msixbundle</code></li>
+            <li>Run in PowerShell:</li>
+          </ol>
+          <div class="code-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>Add-AppxPackage .\Microsoft.WSL_*.msixbundle
+wsl --version</code></pre>
+          </div>
+        </div>
+        <div class="box">
+          <h3>Step 2: Start Docker Lab</h3>
+          <ol>
+            <li>Open <strong>Docker Desktop</strong> (keep <em>Use WSL 2</em> ticked).</li>
+            <li>Inside <code>fdp-lab</code> folder, start Day 4 services:</li>
+          </ol>
+          <div class="code-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>docker compose --profile streaming up -d</code></pre>
+          </div>
+          <p>Open JupyterLab at: <code>http://localhost:8888</code></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 3 -->
+    <section class="slide" data-title="3. Why Docker Instead of Local Install?">
+      <div class="slide-kicker">Environment Architecture</div>
+      <h2>Why Do We Use Docker for Big Data Labs?</h2>
+      <div class="two-col">
+        <div class="box">
+          <h3>Without Docker (Local Install)</h3>
+          <ul>
+            <li>Installing Java, Hadoop, Spark, and Kafka manually on Windows takes <strong>1 full day</strong>.</li>
+            <li><code>JAVA_HOME</code>, <code>winutils.exe</code>, and port conflicts break setups.</li>
+            <li>Small version mismatches (e.g., Spark 3.5 needing Scala 2.12 Kafka JARs) cause runtime errors.</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h3>With Docker Containers</h3>
+          <ul>
+            <li>Every PC runs the <strong>exact same Linux environment</strong>.</li>
+            <li>Spark 3.5.1, Kafka 3.8.0, Python, and connector JARs are pre-installed.</li>
+            <li>One command starts the lab; one command stops it cleanly without cluttering Windows.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout">
+        <strong>Check Your Containers:</strong> Run <code>docker ps</code> &mdash; you should see two running <span class="term" data-term="container">containers</span>: <code>lab</code> (Jupyter + Spark) and <code>kafka</code> (Broker).
+      </div>
+    </section>
+
+    <!-- SLIDE 4 -->
+    <section class="slide" data-title="4. The Problem: EV Charging & Batch vs Stream">
+      <div class="slide-kicker">Motivation</div>
+      <h2>Real-World Scenario: EV Charging Stations</h2>
+      <p>Imagine <strong>1,000 EV Charging Stations</strong> sending live data every second (voltage, current, temperature, kWh). Multiple teams need this data at the same time:</p>
+      <ul>
+        <li><strong>Alert Service:</strong> Needs instant alerts if charger temp &gt; 70&deg;C (&lt; 2 seconds).</li>
+        <li><strong>Billing Service:</strong> Needs every kWh reading to bill customers accurately.</li>
+        <li><strong>AI/ML Pipeline:</strong> Needs historical logs to predict charger failures.</li>
+      </ul>
+      <p>Connecting chargers directly to all 3 systems creates <strong>point-to-point chaos</strong>: if Billing crashes for 10 minutes, revenue data is lost; peak traffic crashes the database.</p>
+      <table>
+        <thead>
+          <tr><th>Aspect</th><th>Batch Processing (Days 1–3)</th><th>Stream Processing (Day 4)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Data</strong></td><td><span class="term" data-term="bounded">Bounded</span> (finite files in HDFS/MySQL)</td><td><span class="term" data-term="unbounded">Unbounded</span> (continuous, never-ending events)</td></tr>
+          <tr><td><strong>Latency</strong></td><td>Minutes to Hours (e.g., midnight report)</td><td>Milliseconds to Seconds (e.g., thermal cut-off)</td></tr>
+          <tr><td><strong>Analogy</strong></td><td>Washing all dishes together at night</td><td>Rinsing each plate under a running tap as used</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- SLIDE 5 -->
+    <section class="slide" data-title="5. What is Apache Kafka?">
+      <div class="slide-kicker">Core Concept</div>
+      <h2>What Is Apache Kafka?</h2>
+      <p><strong>Apache Kafka</strong> is a distributed event streaming <strong>server</strong> (written in Java/Scala) that acts as a durable, high-speed <strong>Central Digital Post Office</strong>.</p>
+      <ul>
+        <li>EV Chargers send events <strong>once</strong> to Kafka.</li>
+        <li>Kafka writes events sequentially to <strong>disk</strong> in strict order.</li>
+        <li>Alert, Billing, and ML teams read from Kafka <strong>independently at their own speed</strong>.</li>
+      </ul>
+      <table>
+        <thead>
+          <tr><th>System</th><th>Storage</th><th>What happens on Read?</th><th>Analogy</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>MySQL</strong></td><td>Disk (B-Tree)</td><td>Stores current state; rows are overwritten (<code>UPDATE</code>)</td><td>Whiteboard (old values erased)</td></tr>
+          <tr><td><strong>Redis Queue</strong></td><td>Primarily RAM</td><td>Message is <strong>deleted</strong> immediately after popping</td><td>Post-it note shredded after reading</td></tr>
+          <tr><td><strong>Apache Kafka</strong></td><td>Disk + <span class="term" data-term="page-cache">OS Page Cache</span></td><td><strong>Kept for retention</strong> (e.g., 7 days); rewindable!</td><td>Bank Passbook / CCTV recording</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- SLIDE 6 -->
+    <section class="slide" data-title="6. How Kafka Scales & Connects">
+      <div class="slide-kicker">Under the Hood</div>
+      <h2>How Kafka Handles 10,000+ Stations Without Crashing</h2>
+      <div class="two-col">
+        <div class="box">
+          <h3>Performance &amp; Storage</h3>
+          <ul>
+            <li><strong>Strictly <span class="term" data-term="append-only">Append-Only</span>:</strong> No <code>UPDATE</code> or <code>DELETE</code>. No SQL tables inside Kafka&mdash;only raw bytes (<code>key</code> + <code>value</code>).</li>
+            <li><strong><span class="term" data-term="page-cache">OS Page Cache</span>:</strong> Keeps <span class="term" data-term="jvm-heap">JVM Heap</span> tiny; Linux caches recent disk blocks in RAM automatically.</li>
+            <li><strong><span class="term" data-term="zero-copy">Zero-Copy</span>:</strong> Sends bytes straight from disk cache to network card.</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h3>Connectivity &amp; Security</h3>
+          <ul>
+            <li><strong><span class="term" data-term="binary-tcp">Binary TCP</span> (Port 9092):</strong> 10x&ndash;50x faster than HTTP. Producers use tiny 5ms micro-batches (<code>linger.ms</code>) for speed.</li>
+            <li><strong>IoT Edge (<span class="term" data-term="mqtt">MQTT</span>):</strong> Chargers speak MQTT &rarr; <span class="term" data-term="kafka-connect">Kafka Connect</span> bridges to Kafka.</li>
+            <li><strong>Security:</strong> <span class="term" data-term="tls">TLS</span> encryption, <span class="term" data-term="sasl">SASL/OAuth2</span> auth, <span class="term" data-term="acl">ACLs</span>.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: DEDICATED TO TOPIC -->
+    <section class="slide" data-title="7. Kafka Topics: What, Why & How to Create">
+      <div class="slide-kicker">Building Block #1</div>
+      <h2>Kafka Topics: Organizing Your Event Streams</h2>
+      <p>A <span class="term" data-term="topic">Topic</span> is a named feed or category where similar events live&mdash;just like a table in a database or a folder on disk. We separate streams by purpose so consumers only subscribe to what they need (e.g., <code>station-telemetry</code>, <code>billing-events</code>, <code>error-alerts</code>).</p>
+
+      <div class="two-col">
+        <div class="box">
+          <h3>Option A: Create Topic via Kafka CLI</h3>
+          <div class="code-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>docker compose exec kafka /opt/kafka/bin/kafka-topics.sh \
+  --create --if-not-exists \
+  --topic station-telemetry \
+  --partitions 3 \
+  --bootstrap-server localhost:9092</code></pre>
+          </div>
+        </div>
+        <div class="box">
+          <h3>Option B: Create Topic via Python</h3>
+          <div class="code-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>from kafka.admin import KafkaAdminClient, NewTopic
+
+admin = KafkaAdminClient(bootstrap_servers="kafka:29092")
+topic = NewTopic(name="station-telemetry",
+                 num_partitions=3, replication_factor=1)
+admin.create_topics([topic])</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>Flag / Function</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>--create --topic station-telemetry</code></td><td>Registers a new named stream inside the Kafka broker.</td></tr>
+          <tr><td><code>--partitions 3</code> / <code>num_partitions=3</code></td><td>Splits the topic into 3 parallel log files for scaling.</td></tr>
+          <tr><td><code>--bootstrap-server</code></td><td>Address of any Kafka <span class="term" data-term="broker">broker</span> to discover the cluster.</td></tr>
+          <tr><td><code>--describe</code> / <code>--list</code></td><td>Inspects existing topics, partition leaders, and replication.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- SLIDE 8: DEDICATED TO PRODUCER -->
+    <section class="slide" data-title="8. Kafka Producer: Code, API & Scalability">
+      <div class="slide-kicker">Building Block #2</div>
+      <h2>Kafka Producers: Sending Events &amp; Scaling Writes</h2>
+      <p>A <strong>Producer</strong> is any external application (an EV charger gateway, web backend, or Python script using <code>kafka-python</code>) that pushes events into a Kafka Topic.</p>
+
+      <div class="two-col">
+        <div class="box">
+          <h3>Python Producer Code (<code>01_producer_ev.py</code>)</h3>
+          <div class="code-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>from kafka import KafkaProducer
+import json
+
+producer = KafkaProducer(
+    bootstrap_servers="kafka:29092",
+    key_serializer=lambda k: k.encode("utf-8"),
+    value_serializer=lambda v: json.dumps(v).encode("utf-8")
+)
+
+event = {"station_id": "S101", "temp_c": 74.2, "kwh": 2.1}
+meta = producer.send("station-telemetry",
+                     key="S101", value=event).get(timeout=10)
+print(f"Sent to partition={meta.partition}, offset={meta.offset}")</code></pre>
+          </div>
+        </div>
+        <div class="box">
+          <h3>Producer Scalability: 1 vs. Many</h3>
+          <ul>
+            <li><strong>Single Producer:</strong> Good for testing or a single gateway.</li>
+            <li><strong>Multiple Producers:</strong> 1,000 EV stations can all write to the same topic <strong>simultaneously</strong> without locking each other!</li>
+            <li><strong>Tuning Speed:</strong> <code>batch.size</code> &amp; <code>linger_ms=5</code> group tiny events into one compressed TCP packet.</li>
+            <li><strong>Durability (<code>acks</code>):</strong> <code>acks=1</code> (leader confirms) vs <code>acks="all"</code> (zero data loss).</li>
+          </ul>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>Function / Parameter</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>KafkaProducer(bootstrap_servers=...)</code></td><td>Opens a persistent binary TCP connection to the Kafka broker.</td></tr>
+          <tr><td><code>key_serializer / value_serializer</code></td><td>Converts Python strings/dicts into raw UTF-8 JSON bytes for Kafka.</td></tr>
+          <tr><td><code>producer.send(topic, key=..., value=...)</code></td><td>Pushes the event asynchronously to the partition matching <code>hash(key)</code>.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- SLIDE 9: DEDICATED TO PARTITIONS & DATA ORGANIZATION -->
+    <section class="slide" data-title="9. Partitions, Offsets & Capacity Planning">
+      <div class="slide-kicker">Building Block #3</div>
+      <h2>Partitions, Offsets &amp; Why the Hash Formula Matters</h2>
+      <p>Kafka does <strong>not</strong> auto-create one partition per station. <strong>You</strong> choose the partition count, and Kafka routes keyed messages using: <code>Partition = hash(key) % num_partitions</code>.</p>
+
+      <div class="diagram">Topic: "station-telemetry" (3 Partitions)
+────────────────────────────────────────────────────────────────────────────────
+Partition 0 (S101, S104...):
+  HEAD (Oldest)                                                   TAIL (Writes)
+  [ Offset 0 ] ──▶ [ Offset 1 ] ──▶ [ Offset 2 ] ◀── Producer appends Offset 3
+  {"id":"S101",    {"id":"S101",    {"id":"S101",
+   "temp":42}       "temp":44}       "temp":72}
+
+Partition 1 (S102, S105...):  [ Offset 0 ] ──▶ [ Offset 1 ] ◀── Producer appends
+Partition 2 (S103, S106...):  [ Offset 0 ] ◀── Producer appends</div>
+
+      <div class="two-col">
+        <div class="box">
+          <h3>Why Use This Hash Formula?</h3>
+          <ul>
+            <li><strong>Guaranteed Order:</strong> All events with <code>key="S101"</code> always hit Partition 0 in exact time order.</li>
+            <li><strong>No Key (<code>key=None</code>):</strong> Kafka spreads events Round-Robin across all partitions (max write speed, no per-station order).</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h3>How Many Partitions Should I Pick?</h3>
+          <ul>
+            <li>Partitions determine your <strong>maximum parallelism</strong>!</li>
+            <li>Rule: <code>Max Parallel Consumers = Number of Partitions</code>.</li>
+            <li>Small lab: <code>3</code>. Production: <code>12&ndash;50</code> (too many = extra file handles/RAM overhead).</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 10: DEDICATED TO CONSUMER & CONSUMER GROUPS -->
+    <section class="slide" data-title="10. Consumers & Consumer Groups: Code & Rules">
+      <div class="slide-kicker">Building Block #4</div>
+      <h2>Kafka Consumers &amp; Consumer Groups</h2>
+      <p>A <strong>Consumer</strong> pulls events from partitions using an internal poll loop and remembers its position using an <span class="term" data-term="offset">Offset</span> bookmark.</p>
+
+      <div class="two-col">
+        <div class="box">
+          <h3>Python Consumer Code (<code>02_consumer_group.py</code>)</h3>
+          <div class="code-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>from kafka import KafkaConsumer
+import json
+
+consumer = KafkaConsumer(
+    "station-telemetry",
+    bootstrap_servers="kafka:29092",
+    group_id="alert-team",
+    auto_offset_reset="earliest",
+    value_deserializer=lambda v: json.loads(v.decode("utf-8"))
+)
+
+for msg in consumer:
+    print(f"P{msg.partition} Off={msg.offset}: {msg.value}")</code></pre>
+          </div>
+        </div>
+        <div class="box">
+          <h3>Consumer Group Rules</h3>
+          <ul>
+            <li><strong>Different Groups</strong> (<code>alert-team</code> vs <code>billing-team</code>): Separate offset bookmarks &rarr; <strong>both read 100% of messages</strong>.</li>
+            <li><strong>Same Group</strong> (3 consumers in <code>alert-team</code>): Partitions split among them!</li>
+            <li><strong>1 Partition = 1 Consumer max</strong> inside one group (a 4th consumer on 3 partitions sits idle).</li>
+          </ul>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>Function / Parameter</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>group_id="alert-team"</code></td><td>Identifies which consumer team this worker belongs to for load balancing.</td></tr>
+          <tr><td><code>auto_offset_reset="earliest"</code></td><td>If no saved offset exists, starts reading from Head (Offset 0) instead of Tail.</td></tr>
+          <tr><td><code>for msg in consumer:</code></td><td>Continuously polls Kafka for new batches and auto-commits offsets.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- SLIDE 11: HANDS-ON #1 & #2 -->
+    <section class="slide" data-title="11. Hands-On Lab: CLI, Producer & Consumer Groups">
+      <div class="slide-kicker">Interactive Lab #1</div>
+      <h2>Hands-On: Stream &amp; Test Consumer Groups Live</h2>
+      <p>Run these commands from your <code>fdp-lab</code> terminal (or JupyterLab Terminal) to watch partitions and consumer groups in action:</p>
+
+      <div class="callout lab">
+        <strong>Step 1 &mdash; Start the EV Station Producer (Terminal 1):</strong>
+        <div class="code-wrap">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre><code>docker compose exec lab python3 /workspace/day4/01_producer_ev.py</code></pre>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="box">
+          <h3>Step 2: Same Group (Terminal 2 &amp; 3)</h3>
+          <p>Run both with <code>alert-team</code> &mdash; notice partitions split between them!</p>
+          <div class="code-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>docker compose exec lab python3 /workspace/day4/02_consumer_group.py alert-team</code></pre>
+          </div>
+        </div>
+        <div class="box">
+          <h3>Step 3: Independent Group (Terminal 4)</h3>
+          <p>Run with <code>billing-team</code> &mdash; receives ALL messages independently!</p>
+          <div class="code-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>docker compose exec lab python3 /workspace/day4/02_consumer_group.py billing-team</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 12 -->
+    <section class="slide" data-title="12. Legacy vs Classic vs Modern Architecture">
+      <div class="slide-kicker">Industry Evolution</div>
+      <h2>From Legacy Batch to Modern Streaming Lakehouse</h2>
+      <table>
+        <thead>
+          <tr><th>Era</th><th>Stack</th><th>Key Evolution</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Legacy (Pre-2012)</strong></td><td>Flume &rarr; HDFS &rarr; MapReduce</td><td>Batch-only; hours of delay; no real-time alerting.</td></tr>
+          <tr><td><strong>Classic (2014–2020)</strong></td><td>Kafka + <span class="term" data-term="zookeeper">ZooKeeper</span> &rarr; Spark DStreams</td><td>Required separate ZooKeeper cluster &amp; separate batch/stream code.</td></tr>
+          <tr><td><strong>Modern (Today)</strong></td><td>MQTT &rarr; Kafka (<span class="term" data-term="kraft">KRaft</span>) &rarr; Spark Structured Streaming &rarr; <span class="term" data-term="medallion">Medallion</span></td><td>No ZooKeeper! Unified SQL/DataFrame engine + Bronze/Silver/Gold layers.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong>Modern Alternatives:</strong><br/>
+        &bull; <strong>Messaging:</strong> RabbitMQ (task queues), Redpanda (C++ Kafka drop-in), Apache Pulsar, AWS Kinesis.<br/>
+        &bull; <strong>Stream Processing:</strong> Apache Flink (sub-10ms true event-at-a-time), Kafka Streams (Java library).
+      </div>
+    </section>
+
+    <!-- SLIDE 13 -->
+    <section class="slide" data-title="13. Spark Structured Streaming Architecture & API">
+      <div class="slide-kicker">Kafka + Spark</div>
+      <h2>Who Runs Where? &amp; Spark Structured Streaming</h2>
+      <p><strong>Spark IS the Consumer!</strong> You do not run a Python consumer in front of Spark &mdash; Spark connects directly to Kafka and treats the stream as an <strong>Unbounded SQL Table</strong>.</p>
+      <table>
+        <thead>
+          <tr><th>Spark Streaming Function</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>spark.readStream.format("kafka")</code></td><td>Connects Spark directly to Kafka (<code>kafka:29092</code>) as a continuous stream.</td></tr>
+          <tr><td><code>from_json(col("value").cast("string"), schema)</code></td><td>Parses raw Kafka JSON bytes into typed SQL columns (<code>station_id</code>, <code>temp_c</code>).</td></tr>
+          <tr><td><code>withWatermark("ts", "10 seconds")</code></td><td>Handles late-arriving IoT events before closing a time window.</td></tr>
+          <tr><td><code>groupBy(window(col("ts"), "10 seconds"), ...)</code></td><td>Computes rolling metrics (e.g., avg temperature per station every 10s).</td></tr>
+          <tr><td><code>writeStream.outputMode("append" | "update")</code></td><td>Outputs new rows (<code>append</code>) or updated aggregations (<code>update</code>) with <span class="term" data-term="checkpointing">checkpointing</span>.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- SLIDE 14 -->
+    <section class="slide" data-title="14. Hands-On Lab: Spark Alerts & Windowed Analytics">
+      <div class="slide-kicker">Interactive Lab #2</div>
+      <h2>Which File Does What? Running Spark Streaming</h2>
+      <table>
+        <thead>
+          <tr><th>File in <code>/workspace/day4/</code></th><th>What It Demonstrates</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>01_producer_ev.py</code></td><td>Simulates 3 EV chargers sending per-second JSON with <code>station_id</code> key.</td></tr>
+          <tr><td><code>02_consumer_group.py</code></td><td>Raw Python consumer showing Consumer Group load balancing vs broadcast.</td></tr>
+          <tr><td><code>03_spark_kafka_alerts.py</code></td><td><strong>Hot-Path Alerting:</strong> Filters live stream for <code>temp_c &gt; 70.0</code>.</td></tr>
+          <tr><td><code>04_spark_window_agg.py</code></td><td><strong>Windowed Analytics:</strong> 10-second average temp &amp; kWh per station.</td></tr>
+        </tbody>
+      </table>
+      <div class="two-col">
+        <div class="box">
+          <h3>Run Overheating Alerts</h3>
+          <div class="code-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>docker compose exec lab python3 /workspace/day4/03_spark_kafka_alerts.py</code></pre>
+          </div>
+        </div>
+        <div class="box">
+          <h3>Run 10s Windowed Aggregation</h3>
+          <div class="code-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>docker compose exec lab python3 /workspace/day4/04_spark_window_agg.py</code></pre>
+          </div>
+        </div>
+      </div>
+      <div class="callout warn">
+        <strong>Challenge:</strong> Edit <code>03_spark_kafka_alerts.py</code> to alert only when <code>temp_c &gt; 75.0</code> AND <code>voltage &gt; 235.0</code>, and monitor the live DAG in Spark UI at <code>http://localhost:4040</code>!
+      </div>
+    </section>
+
+    <!-- SLIDE 15: DESIGNING NEW SCENARIOS + 10 REAL-WORLD EXAMPLES -->
+    <section class="slide" data-title="15. Designing New Scenarios & 10 Real-World Use Cases">
+      <div class="slide-kicker">Beyond EV Charging</div>
+      <h2>How to Design Any New Scenario + 10 Real-World Examples</h2>
+      <div class="callout">
+        <strong>4-Step Blueprint for Any New Streaming Scenario:</strong>
+        <strong>1.</strong> Name your <strong>Topic</strong> &amp; Partition count &rarr;
+        <strong>2.</strong> Pick the <strong>Partition Key</strong> (for ordering) &rarr;
+        <strong>3.</strong> Define the <strong>Producer JSON</strong> &rarr;
+        <strong>4.</strong> Write the <strong>Spark Filter / Window</strong> logic.
+      </div>
+      <h3>10 Industry Applications Using Apache Kafka</h3>
+      <div class="scenario-grid">
+        <div class="scenario-card"><strong>1. Ride-Sharing (Uber/Ola):</strong> Driver GPS pings every 3s (Key: <code>driver_id</code>) &rarr; live ETA &amp; surge pricing.</div>
+        <div class="scenario-card"><strong>2. UPI &amp; Banking Fraud:</strong> Card/UPI swipes (Key: <code>account_id</code>) &rarr; block impossible geo-jumps in &lt; 1s.</div>
+        <div class="scenario-card"><strong>3. Food Delivery (Swiggy/Zomato):</strong> Order state + rider GPS &rarr; live map updates &amp; kitchen alerts.</div>
+        <div class="scenario-card"><strong>4. OTT Streaming (Netflix):</strong> Play/pause/buffer events &rarr; adaptive bitrate &amp; live recommendations.</div>
+        <div class="scenario-card"><strong>5. Stock Market Ticks:</strong> NSE/BSE price ticks (Key: <code>symbol</code>) &rarr; 1-min candlestick windows.</div>
+        <div class="scenario-card"><strong>6. Hospital ICU Monitoring:</strong> Heart rate &amp; SpO2 sensors (Key: <code>patient_id</code>) &rarr; instant nurse alerts.</div>
+        <div class="scenario-card"><strong>7. Smart Power Grids:</strong> Smart meter kW readings &rarr; peak load balancing &amp; outage detection.</div>
+        <div class="scenario-card"><strong>8. E-Commerce Inventory:</strong> Clickstream + checkout events &rarr; prevent overselling flash-sale stock.</div>
+        <div class="scenario-card"><strong>9. Telecom 5G Towers:</strong> Cell tower signal &amp; drop logs &rarr; auto-detect failing hardware.</div>
+        <div class="scenario-card"><strong>10. Fleet &amp; Cold-Chain Logistics:</strong> Refrigerated truck temp sensors &rarr; alert if vaccine/food warms up.</div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Term Explanation Popup -->
+  <div id="term-drawer" role="dialog" aria-live="polite">
+    <div class="drawer-top">
+      <span class="drawer-tag">Plain-English Definition</span>
+      <button id="drawer-close" aria-label="Close">&times;</button>
+    </div>
+    <div id="drawer-title"></div>
+    <div id="drawer-body"></div>
+  </div>
+
+  <!-- Slide Index Modal -->
+  <div id="index-modal" onclick="toggleIndex()">
+    <div class="index-box" onclick="event.stopPropagation()">
+      <h3 style="margin-top:0; margin-bottom:12px;">Jump to Slide</h3>
+      <div id="index-list"></div>
+    </div>
+  </div>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    let current = 0;
+
+    const counter = document.getElementById("slide-counter");
+    const prevBtn = document.getElementById("prev-btn");
+    const nextBtn = document.getElementById("next-btn");
+    const indexModal = document.getElementById("index-modal");
+    const indexList = document.getElementById("index-list");
+
+    slides.forEach((s, i) => {
+      const div = document.createElement("div");
+      div.className = "index-item";
+      div.textContent = s.getAttribute("data-title") || `Slide ${i + 1}`;
+      div.onclick = () => { goToSlide(i); toggleIndex(); };
+      indexList.appendChild(div);
+    });
+
+    function goToSlide(idx) {
+      slides[current].classList.remove("active");
+      current = Math.max(0, Math.min(slides.length - 1, idx));
+      slides[current].classList.add("active");
+      counter.textContent = `${current + 1} / ${slides.length}`;
+      prevBtn.disabled = current === 0;
+      nextBtn.disabled = current === slides.length - 1;
+    }
+
+    function changeSlide(delta) { goToSlide(current + delta); }
+    function toggleIndex() { indexModal.classList.toggle("open"); }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight") changeSlide(1);
+      if (e.key === "ArrowLeft") changeSlide(-1);
+      if (e.key === "Escape") {
+        drawer.classList.remove("open");
+        indexModal.classList.remove("open");
+      }
+    });
+
+    const GLOSSARY = {
+      "wsl": { title: "WSL (Windows Subsystem for Linux)", body: "A Windows feature that runs a real Linux kernel in the background. Docker Desktop uses WSL 2 so Linux tools like Kafka and Spark run natively on Windows." },
+      "docker": { title: "Docker & Docker Compose", body: "Packages software and all its exact dependencies into portable containers. Docker Compose launches multi-container setups (Kafka + Spark) with one command." },
+      "container": { title: "Container", body: "A lightweight, isolated mini-Linux environment running on your PC that starts in seconds and avoids version conflicts." },
+      "bounded": { title: "Bounded Data", body: "Finite data with a clear start and end (e.g., a CSV file or database table). Once read, the job finishes." },
+      "unbounded": { title: "Unbounded Data", body: "Continuous data that never stops arriving (e.g., per-second EV charger logs). Processing runs 24/7." },
+      "page-cache": { title: "OS Page Cache", body: "Linux automatically keeps recently written disk blocks in free system RAM. Kafka relies on this for RAM-level read speed without stuffing Java memory." },
+      "append-only": { title: "Append-Only Log", body: "New records are only added to the end (tail) of the file—never edited or deleted in place. This enables high speed and lock-free reads." },
+      "jvm-heap": { title: "JVM Heap", body: "Memory managed directly by Java. Keeping it small prevents long Garbage Collection pauses." },
+      "zero-copy": { title: "Zero-Copy (sendfile)", body: "A Linux kernel shortcut that transfers bytes directly from the OS disk cache to the network card without copying them into Kafka's memory." },
+      "binary-tcp": { title: "Binary TCP Protocol", body: "Kafka's compact binary protocol over an open TCP connection (port 9092). Much faster and lighter than HTTP/REST." },
+      "mqtt": { title: "MQTT", body: "A lightweight pub/sub protocol designed for IoT devices (like EV chargers on 4G/5G networks)." },
+      "kafka-connect": { title: "Kafka Connect", body: "A plugin framework that bridges external systems (like MQTT brokers or MySQL) directly into Kafka without boilerplate code." },
+      "tls": { title: "TLS / SSL", body: "Encrypts network traffic between clients and Kafka brokers (just like HTTPS)." },
+      "sasl": { title: "SASL / OAuth2", body: "Authentication mechanisms so only authorized producers and consumers can connect to Kafka." },
+      "acl": { title: "ACL (Access Control List)", body: "Fine-grained permissions (e.g., Charger S101 can only WRITE to station-telemetry; Billing can only READ)." },
+      "broker": { title: "Kafka Broker", body: "A running Kafka server process that receives, stores, and serves event streams." },
+      "topic": { title: "Kafka Topic", body: "A named category or feed of events inside Kafka (similar to a folder or table name)." },
+      "partition": { title: "Partition", body: "A topic is divided into ordered log files called Partitions so data can scale across disks and be read in parallel." },
+      "offset": { title: "Offset", body: "The sequential index number (0, 1, 2...) of each message inside a partition. Consumers use it as a bookmark." },
+      "zookeeper": { title: "Apache ZooKeeper (Legacy)", body: "An external coordination service required by older Kafka (< 3.x) to track brokers and partition leaders." },
+      "kraft": { title: "KRaft (Kafka Raft)", body: "Kafka's modern built-in consensus mode (used in Kafka 3.8) that removes ZooKeeper completely." },
+      "medallion": { title: "Medallion Architecture", body: "A 3-layer Data Lake pattern: Bronze (raw data), Silver (cleaned & enriched), Gold (aggregated KPIs & ML features)." },
+      "checkpointing": { title: "Checkpointing", body: "Spark's crash-recovery mechanism that saves processed Kafka offsets to disk after every micro-batch." }
+    };
+
+    const drawer = document.getElementById("term-drawer");
+    const drawerTitle = document.getElementById("drawer-title");
+    const drawerBody = document.getElementById("drawer-body");
+
+    document.querySelectorAll(".term").forEach(el => {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const entry = GLOSSARY[el.getAttribute("data-term")];
+        if (!entry) return;
+        drawerTitle.textContent = entry.title;
+        drawerBody.textContent = entry.body;
+        drawer.classList.add("open");
+      });
+    });
+
+    document.getElementById("drawer-close").onclick = () => drawer.classList.remove("open");
+
+    function copyCode(btn) {
+      navigator.clipboard.writeText(btn.nextElementSibling.innerText).then(() => {
+        const old = btn.textContent;
+        btn.textContent = "Copied!";
+        setTimeout(() => btn.textContent = old, 1400);
+      });
+    }
+
+    goToSlide(0);
+  </script>
+</body>
+</html>
