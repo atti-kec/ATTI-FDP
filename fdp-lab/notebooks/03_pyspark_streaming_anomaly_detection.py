@@ -87,6 +87,41 @@ def main():
 
     spark.sparkContext.setLogLevel("WARN")
 
+    # 0. Pre-flight Check: Ensure Elasticsearch template and 2-shard index exist
+    try:
+        from elasticsearch import Elasticsearch
+        es_host = os.environ.get("ES_HOST", "http://elasticsearch:9200")
+        es = Elasticsearch(es_host)
+        
+        # Register index template so any station-alerts* index defaults to 2 primary shards
+        template_body = {
+            "index_patterns": ["station-alerts*"],
+            "template": {
+                "settings": {
+                    "number_of_shards": 2,
+                    "number_of_replicas": 0
+                }
+            }
+        }
+        es.indices.put_index_template(name="station_alerts_template", body=template_body)
+        print("[+] Verified Elasticsearch index template 'station_alerts_template' (2 primary shards).")
+
+        if not es.indices.exists(index="station-alerts"):
+            es.indices.create(
+                index="station-alerts",
+                body={
+                    "settings": {
+                        "number_of_shards": 2,
+                        "number_of_replicas": 0
+                    }
+                }
+            )
+            print("[+] Initialized Elasticsearch index 'station-alerts' with 2 primary shards.")
+        else:
+            print("[+] Elasticsearch index 'station-alerts' active.")
+    except Exception as e:
+        print(f"[-] Note: Elasticsearch pre-flight index check skipped ({e})")
+
     # 1. Load Pre-trained MLlib Pipeline Model
     if not os.path.exists(model_path):
         print(f"[!] Model not found at {model_path}. Please run 02_train_anomaly_model.py first!")
