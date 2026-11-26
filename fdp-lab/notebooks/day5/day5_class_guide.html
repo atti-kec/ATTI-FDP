@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 5: Big Data Analytics & Machine Learning with Spark MLlib</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --slide-bg: #ffffff;
+      --surface: #f8fafc;
+      --border: #cbd5e1;
+      --text: #0f172a;
+      --muted: #475569;
+      --accent: #0284c7;
+      --accent-dark: #0369a1;
+      --purple: #6d28d9;
+      --purple-bg: #ede9fe;
+      --green: #059669;
+      --green-bg: #d1fae5;
+      --amber: #d97706;
+      --amber-bg: #fef3c7;
+      --code-bg: #0f172a;
+      --code-text: #f8fafc;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      background: #0f172a;
+      color: #fff;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 3px solid var(--accent);
+      flex-shrink: 0;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 14px; }
+    .badge {
+      background: #7c3aed;
+      color: #fff;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .deck-title { font-size: 1.02rem; font-weight: 600; color: #e2e8f0; }
+    .controls { display: flex; align-items: center; gap: 10px; }
+
+    .nav-btn {
+      background: #1e293b;
+      color: #fff;
+      border: 1px solid #334155;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+    .nav-btn:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); }
+    .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    #slide-counter { font-size: 0.92rem; font-weight: 600; color: #94a3b8; min-width: 85px; text-align: center; }
+
+    .stage {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      padding: 18px 24px;
+      overflow: hidden;
+    }
+
+    .slide {
+      display: none;
+      width: 100%;
+      max-width: 1060px;
+      background: var(--slide-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      padding: 30px 42px;
+      overflow-y: auto;
+      flex-direction: column;
+    }
+    .slide.active { display: flex; }
+
+    .title-slide {
+      justify-content: center;
+      text-align: center;
+      background: linear-gradient(135deg, #0f172a 0%, #312e81 100%);
+      color: #fff;
+      border: none;
+    }
+    .title-slide .pill {
+      display: inline-block;
+      background: rgba(167, 139, 250, 0.22);
+      color: #ddd6fe;
+      border: 1px solid rgba(167, 139, 250, 0.45);
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin: 0 auto 20px;
+    }
+    .title-slide h1 { font-size: 2.6rem; line-height: 1.2; margin-bottom: 18px; }
+    .title-slide p { font-size: 1.2rem; color: #cbd5e1; max-width: 740px; margin: 0 auto 28px; }
+
+    .agenda-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      max-width: 780px;
+      margin: 0 auto;
+      text-align: left;
+    }
+    .agenda-item {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 1rem;
+      color: #e2e8f0;
+    }
+
+    .slide-kicker {
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.1px;
+      color: var(--accent);
+      margin-bottom: 5px;
+    }
+    h2 {
+      font-size: 1.82rem;
+      color: var(--text);
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    h3 { font-size: 1.16rem; color: #1e293b; margin: 13px 0 7px; }
+    p, li { font-size: 1.04rem; line-height: 1.55; color: #334155; margin-bottom: 8px; }
+    ul, ol { margin-left: 24px; margin-bottom: 12px; }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 8px 0; }
+    .box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .callout {
+      background: #e0f2fe;
+      border-left: 5px solid var(--accent);
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin: 12px 0;
+      font-size: 1.02rem;
+    }
+    .callout.lab { background: var(--green-bg); border-left-color: var(--green); }
+    .callout.warn { background: var(--amber-bg); border-left-color: var(--amber); }
+
+    table { width: 100%; border-collapse: collapse; margin: 10px 0 14px; font-size: 0.95rem; }
+    th, td { padding: 9px 13px; text-align: left; border: 1px solid var(--border); }
+    th { background: #0f172a; color: #fff; font-weight: 600; }
+    tr:nth-child(even) td { background: var(--surface); }
+
+    .code-wrap { position: relative; margin: 8px 0 12px; }
+    pre {
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 13px 16px;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 0.89rem;
+      line-height: 1.45;
+    }
+    code {
+      font-family: "Cascadia Code", Consolas, monospace;
+      background: #e2e8f0;
+      color: #0f172a;
+      padding: 2px 6px;
+      border-radius: 5px;
+      font-size: 0.9em;
+      font-weight: 600;
+    }
+    pre code { background: none; color: inherit; padding: 0; font-weight: 400; }
+
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #334155;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.76rem;
+      cursor: pointer;
+    }
+    .copy-btn:hover { background: var(--accent); }
+
+    .diagram {
+      background: var(--code-bg);
+      color: #7dd3fc;
+      padding: 14px 16px;
+      border-radius: 10px;
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 0.88rem;
+      line-height: 1.42;
+      white-space: pre;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+
+    .term {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--purple-bg);
+      color: var(--purple);
+      border: 1px dashed #8b5cf6;
+      padding: 0 7px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.95em;
+    }
+    .term:hover { background: #ddd6fe; }
+    .term::after {
+      content: "?";
+      font-size: 0.75em;
+      background: var(--purple);
+      color: #fff;
+      border-radius: 50%;
+      width: 15px;
+      height: 15px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .scenario-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 9px;
+      margin-top: 6px;
+    }
+    .scenario-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 0.93rem;
+    }
+    .scenario-card strong { color: var(--accent-dark); }
+
+    #term-drawer {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 430px;
+      max-width: calc(100vw - 32px);
+      background: #0f172a;
+      color: #f8fafc;
+      border: 2px solid #8b5cf6;
+      border-radius: 12px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+      padding: 18px 20px;
+      z-index: 1000;
+      display: none;
+    }
+    #term-drawer.open { display: block; }
+    .drawer-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .drawer-tag { font-size: 0.75rem; text-transform: uppercase; color: #c4b5fd; font-weight: 700; letter-spacing: 0.8px; }
+    #drawer-close { background: none; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer; }
+    #drawer-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; color: #fff; }
+    #drawer-body { font-size: 0.98rem; color: #cbd5e1; line-height: 1.5; }
+
+    #index-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 900;
+    }
+    #index-modal.open { display: flex; }
+    .index-box {
+      background: #fff;
+      width: 580px;
+      max-width: 92vw;
+      max-height: 82vh;
+      border-radius: 12px;
+      padding: 20px 24px;
+      overflow-y: auto;
+    }
+    .index-item {
+      padding: 9px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      color: #1e293b;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .index-item:hover { background: #e0f2fe; color: var(--accent-dark); }
+
+    @media (max-width: 820px) {
+      .two-col, .agenda-grid, .scenario-grid { grid-template-columns: 1fr; }
+      .slide { padding: 22px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-left">
+      <span class="badge">Day 5</span>
+      <span class="deck-title">Big Data Analytics &amp; Machine Learning using Spark MLlib</span>
+    </div>
+    <div class="controls">
+      <button class="nav-btn" onclick="toggleIndex()">Slides Menu</button>
+      <button class="nav-btn" id="prev-btn" onclick="changeSlide(-1)">&larr; Prev</button>
+      <span id="slide-counter">1 / 16</span>
+      <button class="nav-btn" id="next-btn" onclick="changeSlide(1)">Next &rarr;</button>
+    </div>
+  </header>
+
+  <div class="stage">
+
+    <!-- SLIDE 1 -->
+    <section class="slide title-slide active" data-title="1. Welcome: Big Data ML with Spark MLlib">
+      <div class="pill">FDP on AI-Enabled Big Data Analytics</div>
+      <h1>Big Data Analytics &amp; Machine Learning<br/>using Spark MLlib</h1>
+      <p>From Raw EV Telemetry to Preprocessing, Classification, Regression, Clustering &amp; Live Kafka Scoring</p>
+      <div class="agenda-grid">
+        <div class="agenda-item"><strong>Part 1:</strong> Why MLlib? &amp; How Spark Uses Your PC</div>
+        <div class="agenda-item"><strong>Part 2:</strong> Cleaning, Features &amp; ML Pipelines</div>
+        <div class="agenda-item"><strong>Part 3:</strong> Classification, Regression &amp; Clustering</div>
+        <div class="agenda-item"><strong>Part 4:</strong> Live Kafka + ML Mini-Project Workshop</div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2 -->
+    <section class="slide" data-title="2. Morning Check & Why Spark MLlib?">
+      <div class="slide-kicker">Introduction to ML for Big Data</div>
+      <h2>Why Not Just Use Python Scikit-Learn?</h2>
+      <p>Yesterday we streamed live EV telemetry with Kafka. Over a year, 1,000 stations generate <strong>500 GB+</strong> of history. If we try loading that with Pandas &amp; Scikit-Learn:</p>
+      <ul>
+        <li><strong>Single-PC RAM Limit:</strong> Pandas loads the whole table into one machine's memory &rarr; instant <span class="term" data-term="oom">MemoryError (OOM)</span> crash!</li>
+        <li><strong>Single-Core Bottleneck:</strong> Standard Scikit-Learn steps often leave extra CPU cores idle.</li>
+      </ul>
+      <table>
+        <thead>
+          <tr><th>Feature</th><th>Scikit-Learn (<code>sklearn</code>)</th><th>Spark MLlib (<code>pyspark.ml</code>)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Execution</strong></td><td>Single machine RAM</td><td><span class="term" data-term="cluster">Distributed Cluster</span> (1 to 1,000+ PCs)</td></tr>
+          <tr><td><strong>Data Format</strong></td><td>Pandas DataFrame / NumPy arrays</td><td><span class="term" data-term="dataframe">Spark DataFrame</span> (distributed table)</td></tr>
+          <tr><td><strong>Streaming Link</strong></td><td>Needs manual REST/FastAPI wrapper</td><td><strong>Native!</strong> Loads directly inside Day 4's Kafka stream</td></tr>
+        </tbody>
+      </table>
+      <div class="callout lab">
+        <strong>Start Day 5 Lab Containers:</strong> Run <code>docker compose --profile streaming up -d</code> and open <code>http://localhost:8888</code>.
+      </div>
+    </section>
+
+    <!-- SLIDE 3 -->
+    <section class="slide" data-title="3. How Spark Runs on an 8 GB Laptop (Local Mode)">
+      <div class="slide-kicker">Architecture Fundamentals</div>
+      <h2>How Does a "Distributed Cluster" Run on One 8 GB Laptop?</h2>
+      <div class="two-col">
+        <div class="box">
+          <h3>Cloud Cluster vs. Local Mode</h3>
+          <ul>
+            <li><strong>Cloud Cluster:</strong> 1 Manager (<span class="term" data-term="driver">Driver</span>) + 10 Worker PCs (<span class="term" data-term="executor">Executors</span>).</li>
+            <li><strong>Local Mode (<code>.master("local[*]")</code>):</strong> Spark turns your single laptop into a mini-cluster!</li>
+            <li><strong>Does 50 GB crash 8 GB RAM?</strong> No! Spark slices files into <span class="term" data-term="partition">Partitions</span> (chunks), processes chunks in RAM, and safely spills excess to disk.</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h3>1 CPU vs. Cores vs. vCPUs</h3>
+          <ul>
+            <li>Inside 1 physical CPU chip are 4&ndash;8 hardware <span class="term" data-term="core">Cores</span> (mini-brains).</li>
+            <li>Each core splits into 2 <span class="term" data-term="vcpu">vCPUs</span> (threads) &mdash; e.g., Docker sees 8 vCPUs.</li>
+            <li>The <code>*</code> in <code>local[*]</code> tells Spark: <strong>Use ALL available vCPUs in parallel!</strong></li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout">
+        <strong>Legacy vs. Modern Spark ML:</strong> Older Spark 1.x used <code>pyspark.mllib</code> (RDD-based). Modern Spark uses <code>pyspark.ml</code> (DataFrame + Pipeline API). Always use <code>pyspark.ml</code>!
+      </div>
+    </section>
+
+    <!-- SLIDE 4 -->
+    <section class="slide" data-title="4. DataFrames & Data Preprocessing">
+      <div class="slide-kicker">Step 1 of ML Pipeline</div>
+      <h2>Data Preprocessing: Cleaning Messy EV Sensor Logs</h2>
+      <p>A <span class="term" data-term="dataframe">Spark DataFrame</span> is a 2D table with named columns and rows (like an Excel sheet or MySQL table, but sliced across CPU cores). Real IoT logs always arrive messy:</p>
+      <div class="two-col">
+        <div class="box">
+          <h3>1. Remove Faulty Outliers</h3>
+          <p>Drop impossible sensor readings (like <code>voltage = -999</code>):</p>
+          <div class="code-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>clean_df = df.filter(col("voltage") > 0)</code></pre>
+          </div>
+          <h3>2. Drop vs. Impute Nulls</h3>
+          <p>Never delete healthy rows just because 1 sensor dropped a reading! Use <span class="term" data-term="imputer">Imputer</span> to fill missing values with the column mean/median.</p>
+        </div>
+        <div class="box">
+          <h3>3. Train / Test Split</h3>
+          <p>Always hide 20% of data (<span class="term" data-term="train-test">Train/Test Split</span>) to test fairly and avoid <span class="term" data-term="overfitting">overfitting</span>:</p>
+          <div class="code-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>train_df, test_df = clean_df.randomSplit(
+    [0.8, 0.2], seed=42
+)</code></pre>
+          </div>
+          <p><code>seed=42</code> guarantees everyone in class gets the exact same split.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 5 -->
+    <section class="slide" data-title="5. Feature Engineering: VectorAssembler & Scaling">
+      <div class="slide-kicker">Step 2 of ML Pipeline</div>
+      <h2>Feature Engineering: Formatting Data for Spark MLlib</h2>
+      <p>Unlike Scikit-Learn (where you pass multiple columns directly), <strong>every Spark MLlib algorithm expects ONE single column named <code>features</code></strong> containing a dense array (Vector) of numbers!</p>
+
+      <div class="diagram">Raw Columns                                          After VectorAssembler
+┌──────────┬─────────┬─────────────┬────────┐        ┌─────────────────────────┬───────┐
+│station_id│ voltage │ current_amp │ temp_c │  ───▶  │ features (Single Vector)│ label │
+├──────────┼─────────┼─────────────┼────────┤        ├─────────────────────────┼───────┤
+│ "S101"   │ 238.5   │ 28.0        │ 74.2   │        │ [0.0, 238.5, 28.0, 74.2]│ 1.0   │
+└──────────┴─────────┴─────────────┴────────┘        └─────────────────────────┴───────┘</div>
+
+      <table>
+        <thead>
+          <tr><th>Spark Feature Transformer</th><th>What It Does</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="term" data-term="stringindexer">StringIndexer</span></td><td>Converts text labels (<code>"S101"</code>, <code>"S102"</code>) into numeric IDs (<code>0.0</code>, <code>1.0</code>). Use <code>handleInvalid="keep"</code> for new stations!</td></tr>
+          <tr><td><span class="term" data-term="onehot">OneHotEncoder</span></td><td>Prevents the model from thinking Station 2 is "twice as big" as Station 1 (turns index into binary flags <code>[1,0,0]</code>).</td></tr>
+          <tr><td><span class="term" data-term="vectorassembler">VectorAssembler</span></td><td>Packs all numeric input columns into one single <code>features</code> Vector column.</td></tr>
+          <tr><td><span class="term" data-term="scaler">StandardScaler</span></td><td>Scales values (mean=0, std=1) so large numbers (voltage ~230) don't overpower small numbers (kWh ~2.0).</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- SLIDE 6 -->
+    <section class="slide" data-title="6. Spark ML Pipelines + Hands-On #1">
+      <div class="slide-kicker">Interactive Lab #1</div>
+      <h2>Chaining Everything with <code>Pipeline</code></h2>
+      <p>Instead of manually repeating cleaning, indexing, assembling, and scaling on both training data and live streaming data, wrap every step inside one <span class="term" data-term="pipeline">Pipeline</span>:</p>
+
+      <div class="code-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code>from pyspark.ml import Pipeline
+
+pipeline = Pipeline(stages=[imputer, indexer, assembler, scaler])
+fitted_pipeline = pipeline.fit(clean_df)       # Learns means &amp; scaling stats
+transformed_df  = fitted_pipeline.transform(clean_df)  # Applies them!</code></pre>
+      </div>
+
+      <div class="callout lab">
+        <strong>Hands-On #1 &mdash; Run Preprocessing &amp; Feature Engineering:</strong>
+        <div class="code-wrap">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre><code>docker compose exec lab python3 /workspace/day5/01_preprocess_features.py</code></pre>
+        </div>
+        Inspect how <code>voltage = -999</code> is dropped, <code>None</code> values are imputed, and <code>raw_features</code> vs scaled <code>features</code> look!
+      </div>
+    </section>
+
+    <!-- SLIDE 7 -->
+    <section class="slide" data-title="7. Choosing the Right ML Task">
+      <div class="slide-kicker">Machine Learning Map</div>
+      <h2>3 Core ML Tasks in Spark MLlib</h2>
+      <table>
+        <thead>
+          <tr><th>ML Task</th><th>Learning Type</th><th>Question It Answers (EV Example)</th><th>Spark MLlib Algorithms</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="term" data-term="classification">Classification</span></td><td><span class="term" data-term="supervised">Supervised</span> (has labels)</td><td><strong>Yes / No or Category:</strong> Will this charger overheat/fault? (<code>0</code> or <code>1</code>)</td><td><code>LogisticRegression</code>, <code>RandomForestClassifier</code>, <code>GBTClassifier</code></td></tr>
+          <tr><td><span class="term" data-term="regression">Regression</span></td><td>Supervised (has labels)</td><td><strong>Continuous Number:</strong> How many <code>kWh</code> or &#8377; will this session consume?</td><td><code>LinearRegression</code>, <code>RandomForestRegressor</code></td></tr>
+          <tr><td><span class="term" data-term="clustering">Clustering</span></td><td><span class="term" data-term="unsupervised">Unsupervised</span> (no labels)</td><td><strong>Discover Groups:</strong> Group chargers into Low, Normal &amp; Peak load tiers.</td><td><code>KMeans</code>, <code>BisectingKMeans</code>, <code>GaussianMixture</code></td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong>Simple Rule for Your Mini-Project:</strong><br/>
+        Predicting a <strong>Category/Alert</strong>? Use <strong>Classification</strong>. &bull; Predicting a <strong>Price/Number</strong>? Use <strong>Regression</strong>. &bull; Grouping data with <strong>no labels</strong>? Use <strong>Clustering</strong>.
+      </div>
+    </section>
+
+    <!-- SLIDE 8 -->
+    <section class="slide" data-title="8. Classification: Fault Prediction (Theory & Code)">
+      <div class="slide-kicker">Task #1: Classification</div>
+      <h2>Classification: Predicting EV Charger Faults (<code>0</code> vs <code>1</code>)</h2>
+      <p>We train two classifiers on 500 EV sessions to detect overheating faults based on voltage, current, temperature, and kWh:</p>
+      <div class="two-col">
+        <div class="box">
+          <h3>Logistic Regression</h3>
+          <ul>
+            <li>Fast linear boundary separating Fault (<code>1</code>) vs Normal (<code>0</code>).</li>
+            <li>Outputs both <code>prediction</code> (0/1) and <code>probability</code> (e.g., 92% chance of fault).</li>
+            <li>Great baseline model on huge datasets!</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h3>Random Forest Classifier</h3>
+          <ul>
+            <li>Builds an ensemble of Decision Trees (<code>numTrees=30</code>) and takes a majority vote.</li>
+            <li>Captures non-linear rules like <em>"temp &gt; 68 AND current &gt; 22"</em> automatically!</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="code-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code>from pyspark.ml.classification import LogisticRegression, RandomForestClassifier
+
+rf = RandomForestClassifier(featuresCol="features", labelCol="label", numTrees=30, maxDepth=5)
+rf_pipeline = Pipeline(stages=[indexer, assembler, scaler, rf])
+rf_model = rf_pipeline.fit(train_df)
+predictions = rf_model.transform(test_df)</code></pre>
+      </div>
+    </section>
+
+    <!-- SLIDE 9 -->
+    <section class="slide" data-title="9. Classification Evaluation & Hands-On #2">
+      <div class="slide-kicker">Interactive Lab #2</div>
+      <h2>Evaluating Classifiers &amp; Saving the Trained Model</h2>
+      <table>
+        <thead>
+          <tr><th>Evaluator / Metric</th><th>What It Measures</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>MulticlassClassificationEvaluator(metricName="accuracy")</code></td><td>Overall % of right predictions. <em>(Warning: misleading if 99% of rows are normal and only 1% fault!)</em></td></tr>
+          <tr><td><code>MulticlassClassificationEvaluator(metricName="f1")</code></td><td>Balances <span class="term" data-term="precision-recall">Precision &amp; Recall</span> &mdash; ideal for rare faults/fraud!</td></tr>
+          <tr><td><code>BinaryClassificationEvaluator(metricName="areaUnderROC")</code></td><td><span class="term" data-term="auc-roc">AUC-ROC</span> (0.5 = random guess, 1.0 = perfect separation).</td></tr>
+          <tr><td><code>rf_model.write().overwrite().save("/tmp/ev_fault_model")</code></td><td><span class="term" data-term="persistence">Saves the full PipelineModel</span> to disk so Kafka Streaming can load it!</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout lab">
+        <strong>Hands-On #2 &mdash; Train, Compare &amp; Save Both Classifiers:</strong>
+        <div class="code-wrap">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre><code>docker compose exec lab python3 /workspace/day5/02_classification_fault.py</code></pre>
+        </div>
+        Compare <strong>Logistic Regression vs. Random Forest</strong> accuracy &amp; F1 score on screen!
+      </div>
+    </section>
+
+    <!-- SLIDE 10 -->
+    <section class="slide" data-title="10. Regression: Predicting Energy & Price">
+      <div class="slide-kicker">Task #2: Regression &amp; Lab #3</div>
+      <h2>Regression: Predicting Continuous Values (kWh / Cost)</h2>
+      <p>When your target is a continuous number (like energy consumed in <code>kwh</code>, ride fare, or stock price), we use <strong>Regression</strong>.</p>
+      <div class="two-col">
+        <div class="box">
+          <h3>Spark <code>LinearRegression</code></h3>
+          <div class="code-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>from pyspark.ml.regression import LinearRegression
+from pyspark.ml.evaluation import RegressionEvaluator
+
+lr = LinearRegression(
+    featuresCol="features",
+    labelCol="kwh",
+    maxIter=20,
+    regParam=0.01
+)
+model = Pipeline(stages=[assembler, scaler, lr]).fit(train_df)</code></pre>
+          </div>
+        </div>
+        <div class="box">
+          <h3>Regression Metrics Explained</h3>
+          <ul>
+            <li><span class="term" data-term="rmse">RMSE</span>: Average error in the same unit (<code>kWh</code>), penalizing big misses heavily. <em>Lower is better.</em></li>
+            <li><strong>MAE:</strong> Simple average absolute error.</li>
+            <li><span class="term" data-term="r2">R&sup2; (R-Squared)</span>: How much pattern the model explains (<code>0.0</code> to <code>1.0</code>; closer to <code>1.0</code> is better).</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout lab">
+        <strong>Hands-On #3 &mdash; Predict EV Session kWh:</strong>
+        <div class="code-wrap">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre><code>docker compose exec lab python3 /workspace/day5/03_regression_energy.py</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 11 -->
+    <section class="slide" data-title="11. Clustering: Unsupervised Grouping with K-Means">
+      <div class="slide-kicker">Task #3: Clustering &amp; Lab #4</div>
+      <h2>Clustering: Finding Hidden Groups Without Labels</h2>
+      <p>What if your dataset has <strong>NO <code>label</code> column</strong>? <span class="term" data-term="kmeans">K-Means Clustering</span> discovers natural groups (e.g., <em>Light</em>, <em>Normal</em>, and <em>Peak Stress</em> charging sessions) automatically.</p>
+
+      <div class="two-col">
+        <div class="box">
+          <h3>K-Means Pipeline Code</h3>
+          <div class="code-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>from pyspark.ml.clustering import KMeans
+from pyspark.ml.evaluation import ClusteringEvaluator
+
+kmeans = KMeans(featuresCol="features", k=3, seed=42)
+model = Pipeline(stages=[assembler, scaler, kmeans]).fit(df)
+clustered = model.transform(df)
+
+score = ClusteringEvaluator().evaluate(clustered)</code></pre>
+          </div>
+        </div>
+        <div class="box">
+          <h3>Evaluating Clusters</h3>
+          <ul>
+            <li><strong>Important:</strong> Always run <code>StandardScaler</code> before K-Means because K-Means uses Euclidean distance!</li>
+            <li><span class="term" data-term="silhouette">Silhouette Score</span> ranges from <code>-1</code> to <code>+1</code>. Values near <code>+1</code> mean clusters are tight and well-separated.</li>
+            <li>Use the <span class="term" data-term="elbow">Elbow Method</span> to pick the best <code>k</code>.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout lab">
+        <strong>Hands-On #4 &mdash; Discover 3 Charging Load Tiers:</strong>
+        <div class="code-wrap">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre><code>docker compose exec lab python3 /workspace/day5/04_clustering_stations.py</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 12 -->
+    <section class="slide" data-title="12. Spark MLlib Quick Reference Table">
+      <div class="slide-kicker">Cheat Sheet</div>
+      <h2>Complete Spark MLlib API Reference</h2>
+      <table>
+        <thead>
+          <tr><th>Stage</th><th>Class / Function</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Clean</strong></td><td><code>df.na.drop()</code> / <code>Imputer(...)</code></td><td>Remove or fill missing <code>null</code> sensor readings.</td></tr>
+          <tr><td><strong>Encode</strong></td><td><code>StringIndexer</code> / <code>OneHotEncoder</code></td><td>Turn text categories (<code>"S101"</code>) into numbers.</td></tr>
+          <tr><td><strong>Assemble</strong></td><td><code>VectorAssembler(inputCols=..., outputCol=...)</code></td><td>Merge multiple columns into one <code>features</code> vector.</td></tr>
+          <tr><td><strong>Scale</strong></td><td><code>StandardScaler(withMean=True, withStd=True)</code></td><td>Normalize feature ranges for fair math.</td></tr>
+          <tr><td><strong>Train</strong></td><td><code>LogisticRegression</code> / <code>LinearRegression</code> / <code>KMeans</code></td><td>Fit Classification, Regression, or Clustering model.</td></tr>
+          <tr><td><strong>Evaluate</strong></td><td><code>BinaryClassificationEvaluator</code> / <code>RegressionEvaluator</code> / <code>ClusteringEvaluator</code></td><td>Measure AUC-ROC, Accuracy/F1, RMSE/$R^2$, or Silhouette.</td></tr>
+          <tr><td><strong>Save / Load</strong></td><td><code>model.write().save(path)</code> / <code>PipelineModel.load(path)</code></td><td>Export trained pipeline and load it inside live streaming!</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- SLIDE 13 -->
+    <section class="slide" data-title="13. Closing the Loop: Day 4 Kafka + Day 5 ML">
+      <div class="slide-kicker">End-to-End Integration</div>
+      <h2>Connecting Day 4 (Kafka) + Day 5 (MLlib) in Real Time</h2>
+      <p>Notice how the <strong>Cold Path</strong> (Batch ML training) feeds directly into the <strong>Hot Path</strong> (Real-Time Kafka Scoring):</p>
+      <div class="diagram">[Cold Path: Historical Data] ──▶ 02_classification_fault.py ──▶ Saves PipelineModel (/tmp/ev_fault_model)
+                                                                          │
+                                                                          ▼ (Loaded once at startup!)
+[Hot Path: Live Kafka Stream] ──▶ 01_producer_ev.py ──▶ Kafka ──▶ 05_kafka_stream_ml.py ──▶ Live Predictions!</div>
+
+      <div class="code-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code># Inside 05_kafka_stream_ml.py:
+ml_model = PipelineModel.load("/tmp/ev_fault_model")   # Load saved PipelineModel
+parsed_stream = raw_stream.select(from_json(...))        # Read live Kafka JSON
+scored_stream = ml_model.transform(parsed_stream)        # Score every live event!</code></pre>
+      </div>
+      <div class="callout">
+        <strong>Why This Is Magical:</strong> You do NOT rewrite preprocessing code for streaming! <code>PipelineModel.load()</code> remembers the exact <code>StringIndexer</code> mapping and <code>StandardScaler</code> mean/std from training.
+      </div>
+    </section>
+
+    <!-- SLIDE 14 -->
+    <section class="slide" data-title="14. Hands-On #5: Live Kafka + ML Scoring Lab">
+      <div class="slide-kicker">Interactive Lab #5</div>
+      <h2>Live Demo: Real-Time ML Fault Scoring on Kafka</h2>
+      <p>Let us run our Day 4 EV Producer and watch Day 5's Random Forest model predict faults live on every incoming message:</p>
+
+      <div class="two-col">
+        <div class="box">
+          <h3>Terminal 1: Start Live EV Producer</h3>
+          <div class="code-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>docker compose exec lab python3 /workspace/day4/01_producer_ev.py</code></pre>
+          </div>
+          <p>Streams live voltage, current, temp, and kWh every second to Kafka.</p>
+        </div>
+        <div class="box">
+          <h3>Terminal 2: Start Live ML Scorer</h3>
+          <div class="code-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>docker compose exec lab python3 /workspace/day5/05_kafka_stream_ml.py</code></pre>
+          </div>
+          <p>Loads <code>/tmp/ev_fault_model</code> and prints <code>prediction = 0.0 / 1.0</code> live!</p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>File in <code>/workspace/day5/</code></th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>01_preprocess_features.py</code></td><td>Cleaning outliers, Imputer, StringIndexer, VectorAssembler, StandardScaler.</td></tr>
+          <tr><td><code>02_classification_fault.py</code></td><td>Trains Logistic Regression &amp; Random Forest; saves model to <code>/tmp/ev_fault_model</code>.</td></tr>
+          <tr><td><code>03_regression_energy.py</code></td><td>Predicts continuous <code>kwh</code> using Linear Regression (RMSE, MAE, R&sup2;).</td></tr>
+          <tr><td><code>04_clustering_stations.py</code></td><td>Groups EV sessions into 3 usage tiers using K-Means (Silhouette Score).</td></tr>
+          <tr><td><code>05_kafka_stream_ml.py</code></td><td><strong>Live Capstone Bridge:</strong> Loads saved ML model and scores Kafka streams live!</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- SLIDE 15 -->
+    <section class="slide" data-title="15. Mini-Project Workshop: 3-File Template">
+      <div class="slide-kicker">Afternoon Mini-Project Workshop</div>
+      <h2>Build Your Own Real-Time AI/ML Pipeline (3-File Blueprint)</h2>
+      <p>Take your chosen scenario from Day 4 and attach a Spark MLlib model using this exact 3-file pattern:</p>
+      <div class="two-col">
+        <div class="box">
+          <h3>1. <code>producer.py</code> (From Day 4)</h3>
+          <p>Simulate 1 event/second for your domain using Python <code>random</code> and push JSON to your Kafka topic.</p>
+          <h3>2. <code>train_model.py</code> (From Day 5)</h3>
+          <p>Generate 300&ndash;500 rows of training data (or read from HDFS/MySQL), train a <strong>Classifier, Regressor, or K-Means Pipeline</strong>, print evaluation metrics, and <code>save()</code> it.</p>
+        </div>
+        <div class="box">
+          <h3>3. <code>stream_predict.py</code> (Integration)</h3>
+          <p>Load your saved <code>PipelineModel</code>, subscribe to your Kafka topic with <code>spark.readStream</code>, run <code>model.transform(...)</code>, and print live predictions/alerts!</p>
+          <div class="callout warn" style="margin-top:10px;">
+            <strong>Preview of Day 6:</strong> Tomorrow we will send these live ML predictions into <strong>Elasticsearch &amp; Kibana</strong> for real-time dashboards!
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 16 -->
+    <section class="slide" data-title="16. 10 Mini-Project Scenarios + ML Model Guide">
+      <div class="slide-kicker">Choose Your Project</div>
+      <h2>Which ML Model Fits Each of the 10 Scenarios?</h2>
+      <div class="scenario-grid">
+        <div class="scenario-card"><strong>1. Ride-Sharing (Uber/Ola):</strong> Kafka key <code>driver_id</code> &rarr; <strong>Regression</strong> (predict trip ETA or surge fare).</div>
+        <div class="scenario-card"><strong>2. UPI / Banking Fraud:</strong> Kafka key <code>account_id</code> &rarr; <strong>Classification</strong> (Random Forest: <code>is_fraud</code> 0/1).</div>
+        <div class="scenario-card"><strong>3. Food Delivery (Swiggy):</strong> Kafka key <code>order_id</code> &rarr; <strong>Regression</strong> (predict delivery time in mins).</div>
+        <div class="scenario-card"><strong>4. OTT Streaming (Netflix):</strong> Kafka key <code>user_id</code> &rarr; <strong>Clustering</strong> (K-Means viewer watch-tier profiles).</div>
+        <div class="scenario-card"><strong>5. Stock Market Ticks:</strong> Kafka key <code>symbol</code> &rarr; <strong>Regression</strong> (predict short-term price move).</div>
+        <div class="scenario-card"><strong>6. Hospital ICU Vitals:</strong> Kafka key <code>patient_id</code> &rarr; <strong>Classification</strong> (alert if Heart Rate/SpO2 critical).</div>
+        <div class="scenario-card"><strong>7. Smart Power Grids:</strong> Kafka key <code>meter_id</code> &rarr; <strong>Clustering</strong> (K-Means Low/Medium/Peak load zones).</div>
+        <div class="scenario-card"><strong>8. E-Commerce Clickstream:</strong> Kafka key <code>session_id</code> &rarr; <strong>Classification</strong> (predict Will User Buy? 0/1).</div>
+        <div class="scenario-card"><strong>9. Telecom 5G Towers:</strong> Kafka key <code>tower_id</code> &rarr; <strong>Classification</strong> (predict tower drop/fault alert).</div>
+        <div class="scenario-card"><strong>10. Cold-Chain Logistics:</strong> Kafka key <code>truck_id</code> &rarr; <strong>Classification / Regression</strong> (predict spoilage risk).</div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Term Explanation Popup -->
+  <div id="term-drawer" role="dialog" aria-live="polite">
+    <div class="drawer-top">
+      <span class="drawer-tag">Plain-English Definition</span>
+      <button id="drawer-close" aria-label="Close">&times;</button>
+    </div>
+    <div id="drawer-title"></div>
+    <div id="drawer-body"></div>
+  </div>
+
+  <!-- Slide Index Modal -->
+  <div id="index-modal" onclick="toggleIndex()">
+    <div class="index-box" onclick="event.stopPropagation()">
+      <h3 style="margin-top:0; margin-bottom:12px;">Jump to Slide</h3>
+      <div id="index-list"></div>
+    </div>
+  </div>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    let current = 0;
+
+    const counter = document.getElementById("slide-counter");
+    const prevBtn = document.getElementById("prev-btn");
+    const nextBtn = document.getElementById("next-btn");
+    const indexModal = document.getElementById("index-modal");
+    const indexList = document.getElementById("index-list");
+
+    slides.forEach((s, i) => {
+      const div = document.createElement("div");
+      div.className = "index-item";
+      div.textContent = s.getAttribute("data-title") || `Slide ${i + 1}`;
+      div.onclick = () => { goToSlide(i); toggleIndex(); };
+      indexList.appendChild(div);
+    });
+
+    function goToSlide(idx) {
+      slides[current].classList.remove("active");
+      current = Math.max(0, Math.min(slides.length - 1, idx));
+      slides[current].classList.add("active");
+      counter.textContent = `${current + 1} / ${slides.length}`;
+      prevBtn.disabled = current === 0;
+      nextBtn.disabled = current === slides.length - 1;
+    }
+
+    function changeSlide(delta) { goToSlide(current + delta); }
+    function toggleIndex() { indexModal.classList.toggle("open"); }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight") changeSlide(1);
+      if (e.key === "ArrowLeft") changeSlide(-1);
+      if (e.key === "Escape") {
+        drawer.classList.remove("open");
+        indexModal.classList.remove("open");
+      }
+    });
+
+    const GLOSSARY = {
+      "oom": { title: "MemoryError / OOM (Out of Memory)", body: "When a program tries to load more data into RAM than your computer physically has, causing Windows or Python to kill the program." },
+      "cluster": { title: "Distributed Cluster", body: "Multiple computers (or CPU cores in Local Mode) working together as one team—each processing a separate slice of a huge dataset in parallel." },
+      "dataframe": { title: "Spark DataFrame", body: "A 2D table of rows and named columns (just like an Excel sheet or SQL table), except Spark automatically splits its rows across cores/servers for fast processing." },
+      "driver": { title: "Spark Driver", body: "The 'manager' process that runs your Python script, plans the execution steps, and hands out tasks to workers." },
+      "executor": { title: "Spark Executor", body: "Worker processes that actually read data chunks, run the math/ML calculations in parallel, and return results to the Driver." },
+      "partition": { title: "Data Partition", body: "A smaller slice of a large table or file (e.g., 128 MB chunk). Splitting data into partitions allows Spark to process pieces one by one without overflowing 8 GB RAM." },
+      "core": { title: "CPU Core", body: "An independent processing unit inside your CPU chip. A 4-core CPU can genuinely run 4 calculations at the exact same instant." },
+      "vcpu": { title: "vCPU (Virtual CPU / Thread)", body: "Modern CPUs split each physical core into 2 virtual threads (e.g., 4 cores = 8 vCPUs). Spark's local[*] uses all available vCPUs simultaneously." },
+      "imputer": { title: "Imputer", body: "A preprocessing tool that automatically fills missing (null/NaN) numbers using the column's average (mean) or middle value (median) instead of throwing away the whole row." },
+      "train-test": { title: "Train / Test Split", body: "Splitting your data (usually 80% to teach the model, 20% hidden like an exam paper) so you can check if the model actually learned patterns rather than memorizing answers." },
+      "overfitting": { title: "Overfitting", body: "When an ML model memorizes the training data too closely (like memorizing exam questions word-for-word) and fails on new real-world data." },
+      "stringindexer": { title: "StringIndexer", body: "Converts text labels like 'S101', 'S102' into numbers (0.0, 1.0) because machine learning equations only work on numbers." },
+      "onehot": { title: "OneHotEncoder", body: "Turns numeric category IDs (0, 1, 2) into binary flags like [1,0,0], [0,1,0] so the model doesn't assume Station 2 is mathematically 'greater than' Station 1." },
+      "vectorassembler": { title: "VectorAssembler", body: "A mandatory Spark MLlib step that combines separate input columns (voltage, current, temp) into ONE single 'features' array column." },
+      "scaler": { title: "StandardScaler", body: "Rescales every feature to have mean=0 and standard deviation=1 so huge numbers (voltage ~230) don't drown out smaller numbers (kWh ~2.0)." },
+      "pipeline": { title: "Spark ML Pipeline", body: "Chains all preprocessing steps + the ML model into one single object. Fitting and saving the Pipeline ensures live streaming data receives identical transformations." },
+      "classification": { title: "Classification", body: "Predicting a discrete label or category—such as Fault vs. Normal (0 or 1), Fraud vs. Legit, or High/Medium/Low risk." },
+      "regression": { title: "Regression", body: "Predicting a continuous numeric quantity—such as electricity consumed (kWh), house price, or delivery time in minutes." },
+      "clustering": { title: "Clustering", body: "Automatically grouping similar records together when you have NO pre-labeled answers (e.g., grouping charging stations by usage behavior)." },
+      "supervised": { title: "Supervised Learning", body: "Training a model using historical examples that already have the correct answer ('label') attached." },
+      "unsupervised": { title: "Unsupervised Learning", body: "Training a model on raw data WITHOUT any correct answer/label column—the algorithm discovers hidden patterns on its own." },
+      "precision-recall": { title: "Precision, Recall & F1 Score", body: "Precision = when we sound a fault alarm, how often is it real? Recall = out of all real faults, how many did we catch? F1 balances both into one score." },
+      "auc-roc": { title: "AUC-ROC", body: "Area Under the ROC Curve (0.5 to 1.0). Measures how well a binary classifier separates positives (1) from negatives (0) across all thresholds." },
+      "persistence": { title: "Model Persistence (Save / Load)", body: "Saving a trained PipelineModel to disk so a separate real-time streaming program can load and use it immediately without retraining." },
+      "rmse": { title: "RMSE (Root Mean Squared Error)", body: "Measures how far Regression predictions are from true values on average, in the original units (e.g., ±0.12 kWh). Big mistakes get penalized more." },
+      "r2": { title: "R-Squared (R²)", body: "A score up to 1.0 showing how well your Regression model fits the trend in the data (0.95 means 95% of the variation is explained)." },
+      "kmeans": { title: "K-Means Clustering", body: "An unsupervised algorithm that picks 'K' cluster centers and assigns every data point to the nearest center." },
+      "silhouette": { title: "Silhouette Score", body: "Measures clustering quality from -1 to +1. Higher values mean points inside each cluster are tightly grouped and far away from other clusters." },
+      "elbow": { title: "Elbow Method", body: "Plotting cluster error against different values of K (2, 3, 4, 5...) and picking the 'bend/elbow' point where adding more clusters stops helping much." }
+    };
+
+    const drawer = document.getElementById("term-drawer");
+    const drawerTitle = document.getElementById("drawer-title");
+    const drawerBody = document.getElementById("drawer-body");
+
+    document.querySelectorAll(".term").forEach(el => {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const entry = GLOSSARY[el.getAttribute("data-term")];
+        if (!entry) return;
+        drawerTitle.textContent = entry.title;
+        drawerBody.textContent = entry.body;
+        drawer.classList.add("open");
+      });
+    });
+
+    document.getElementById("drawer-close").onclick = () => drawer.classList.remove("open");
+
+    function copyCode(btn) {
+      navigator.clipboard.writeText(btn.nextElementSibling.innerText).then(() => {
+        const old = btn.textContent;
+        btn.textContent = "Copied!";
+        setTimeout(() => btn.textContent = old, 1400);
+      });
+    }
+
+    goToSlide(0);
+  </script>
+</body>
+</html>
